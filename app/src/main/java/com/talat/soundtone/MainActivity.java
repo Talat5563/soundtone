@@ -51,11 +51,11 @@ public class MainActivity extends AppCompatActivity
     ListView listView;
     NavigationView navigationView;
 
-    Dialogs appDialogs;
+    private Dialogs appDialogs;
 
     private HashMap<String,Integer> playlistNames = new HashMap<>();
 
-    String CurrentVisiblePlaylist;
+    private String CurrentVisiblePlaylist;
 
     private boolean gotPermissions = false;
     private boolean isPlaylistSong = false;
@@ -210,24 +210,33 @@ public class MainActivity extends AppCompatActivity
         }else if(name.equals(getString(R.string.all_songs))) {
             playlist = PlayListManager.getAllMedia(this);
             isPlaylistSong = false;
+            listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
+            CurrentVisiblePlaylist = name;
         }else{
-            playlist = PlayListManager.getPlaylist(this,name);
-            int id = playlist.getInt(playlist.getColumnIndexOrThrow(MediaStore.Audio.Playlists._ID));
-            Log.i(TAG,"Playlist is: " + name);
-            Log.i(TAG,"Playlist ID: " + id);
-            playlist = PlayListManager.getPlaylistSongs(this,id);
-            isPlaylistSong = true;
-        }
+            try
+            {
+                playlist = PlayListManager.getPlaylist(this,name);
+                int id = playlist.getInt(playlist.getColumnIndexOrThrow(MediaStore.Audio.Playlists._ID));
+                Log.i(TAG,"Playlist is: " + name);
+                Log.i(TAG,"Playlist ID: " + id);
+                playlist = PlayListManager.getPlaylistSongs(this,id);
+                isPlaylistSong = true;
 
-        listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
-        CurrentVisiblePlaylist = name;
+                listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
+                CurrentVisiblePlaylist = name;
+
+            } catch ( IllegalArgumentException e){
+                Log.e(TAG, getString(R.string.cant_find_playlists),e);
+                Toast.makeText(this,getString(R.string.cant_find_playlists),Toast.LENGTH_SHORT).show();
+            }
+        }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
-    public void setMediaPathAsDefaultRingtone(Cursor MediaCursor)
+    public void setMediaPathAsDefaultRingtone(Cursor MediaCursor) throws IllegalArgumentException
     {
         //Get newMediaPath
         String newMediaPath = MediaCursor.getString(MediaCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
@@ -279,12 +288,19 @@ public class MainActivity extends AppCompatActivity
         }else {
             gotPermissions = true;
             listView.setAdapter(new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true));
-            setPlayListsAsMenuItem(navigationView);
+            try
+            {
+                setPlayListsAsMenuItem(navigationView);
+            }catch(IllegalArgumentException e)
+            {
+                Log.e(TAG, getString(R.string.cant_find_playlists),e);
+                Toast.makeText(this,getString(R.string.cant_find_playlists),Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
 
-    public void setPlayListsAsMenuItem(NavigationView navigationView)
+    public void setPlayListsAsMenuItem(NavigationView navigationView) throws IllegalArgumentException
     {
         Menu menu = navigationView.getMenu();
 
@@ -297,8 +313,16 @@ public class MainActivity extends AppCompatActivity
 
         try(Cursor playlistsCursor = PlayListManager.getPlaylist(this,-1))
         {
+            if(playlistsCursor == null || playlistsCursor.getCount() <=0)
+            {
+                Log.e(TAG,getString(R.string.no_playlists_to_show));
+                Toast.makeText(this,R.string.no_playlists_to_show,Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             playlistsCursor.moveToFirst();
             do {
+
                 final String playlistName = playlistsCursor.
                         getString(playlistsCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.NAME));
                 final int playListId = playlistsCursor.
@@ -315,7 +339,6 @@ public class MainActivity extends AppCompatActivity
                 });
                 item.setActionView(LongClickView);
             } while (playlistsCursor.moveToNext());
-
         }
     }
 

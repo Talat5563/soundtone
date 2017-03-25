@@ -89,4 +89,6 @@
     <string name="pref_ringtone_silent">Silent</string>
 
     <string name="pref_title_vibrate">Vibrate</string>
+    <string name="cant_find_playlists">Cant find any playlists in playlst cursor.</string>
+    <string name="no_playlists_to_show">No playlists to show</string>
 </resources>
