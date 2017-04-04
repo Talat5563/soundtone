@@ -2,17 +2,19 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:background="#B0BEC5"
+    android:id="@+id/list_item_layout"
+    android:background="@color/listItemColor"
     android:orientation="horizontal"
-    android:padding="5dip">
+    android:padding="5dip"
+    android:descendantFocusability="blocksDescendants">
 
     <!--  ListRow Left sied Thumbnail image -->
-    <LinearLayout android:id="@+id/thumbnail"
+    <RelativeLayout android:id="@+id/thumbnail"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="3dip"
         android:layout_alignParentStart="true"
-        android:background="#546E7A"
+        android:background="@color/colorAlbumBack"
         android:layout_marginEnd="5dip">
 
         <ImageView
@@ -20,30 +22,40 @@
             android:layout_width="50dip"
             android:layout_height="50dip"
             android:src="@drawable/default_sound"
-            android:contentDescription="Albom Image" />
+            android:contentDescription="Album Image" />
 
-    </LinearLayout>
+
+        <ImageView
+            android:id="@+id/orange_play"
+            android:src="@drawable/orange_play"
+            android:layout_width="22dip"
+            android:layout_height="22dip"
+            android:layout_alignBottom="@id/list_image"
+            android:layout_alignStart="@id/list_image"
+            android:contentDescription="Play" />
+
+    </RelativeLayout>
 
     <!-- Title Of Song-->
     <TextView
         android:id="@+id/title"
-        android:layout_width="250dp"
+        android:layout_width="230dp"
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/thumbnail"
         android:layout_toEndOf="@+id/thumbnail"
         android:textColor="#040404"
         android:typeface="sans"
-        android:textSize="15sp"
+        android:textSize="14sp"
         android:textStyle="bold"/>
 
     <!-- Artist Name -->
     <TextView
         android:id="@+id/artist"
-        android:layout_width="fill_parent"
+        android:layout_width="230dp"
         android:layout_height="wrap_content"
         android:layout_below="@id/title"
         android:textColor="#343434"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:layout_marginTop="1dip"
         android:layout_toEndOf="@+id/thumbnail"/>
 
@@ -60,16 +72,18 @@
         android:textColor="#212121"
         android:textStyle="bold"/>
 
-    <TextView
+    <Button
         android:id="@+id/collon"
-        android:layout_width="wrap_content"
+        android:layout_width="30dp"
         android:layout_height="wrap_content"
         android:text=":"
         android:textSize="27sp"
         android:textStyle="bold"
-        android:layout_margin="15dp"
-        android:layout_alignEnd="@id/artist"
-        android:layout_centerHorizontal="true"
-        android:onClick="onColonClick"/>
+        android:paddingStart="5dp"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:onClick="onColonClick"
+        android:background="@android:color/transparent"
+        />
 
 </RelativeLayout>

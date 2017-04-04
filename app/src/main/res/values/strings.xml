@@ -8,7 +8,7 @@
     <string name="all_songs">All Songs</string>
     <string name="choose_alarm_playlist">Choose Alarm Playlist</string>
     <string name="add_to_playlist">Add To PlayList</string>
-    <string name="delete_from_playlist">Delete from PlayList</string>
+    <string name="delete_from_playlist">Delete from this PlayList</string>
     <string name="play_song">Play Song in Default Player</string>
     <string name="deleting_song">"Deleting song: "</string>
     <string name="from_playlist">" From Playlist:"</string>
@@ -89,6 +89,14 @@
     <string name="pref_ringtone_silent">Silent</string>
 
     <string name="pref_title_vibrate">Vibrate</string>
-    <string name="cant_find_playlists">Cant find any playlists in playlst cursor.</string>
+    <string name="cant_find_playlists">Can\'t find any playlist in playlist cursor.</string>
     <string name="no_playlists_to_show">No playlists to show</string>
+    <string name="logo">Logo</string>
+    <string name="soundtone">SoundTone</string>
+    <string name="help_text">Help Text - blabla blab ablab ablab</string>
+    <string name="all_rights_reserved">© 2017 Tal Atedgi All Rights Reserved</string>
+    <string name="help">Help</string>
+    <string name="title_activity_help">About Us…</string>
+    <string name="add_to_playlist_button">add to playlist</string>
+    <string name="set_as_def_ring">Set as default ringtone</string>
 </resources>

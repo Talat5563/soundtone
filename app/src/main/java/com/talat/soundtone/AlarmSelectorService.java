@@ -14,6 +14,8 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.Random;
+
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
  * a service on a separate handler thread.
@@ -71,7 +73,19 @@ public class AlarmSelectorService extends IntentService {
         if(songCursor != null) {
             if (songCursor.moveToFirst()) {
                 Log.i(TAG,"Setting songCursor as default media");
-                setMediaAsDefaultRingtone(this,songCursor,isPlaylistSong);
+//                if(SettingsManager.getOrder() == SettingsManager.RANDOM)
+//                {
+
+                Random rand = new Random();
+                int randomNamber = rand.nextInt(songCursor.getCount());
+                if(songCursor.moveToPosition(randomNamber))
+                {
+                    Log.i(TAG,"Song at random position" + randomNamber + " success");
+                    setMediaAsDefaultRingtone(this,songCursor,isPlaylistSong);
+                }else{
+                    Log.i(TAG,"Song at random position" + randomNamber + " failed!!!!!!");
+                }
+//                }
             }
         }
     }

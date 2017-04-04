@@ -29,17 +29,16 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
 import android.view.View;
-import android.view.ViewParent;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity
@@ -51,15 +50,22 @@ public class MainActivity extends AppCompatActivity
     ListView listView;
     NavigationView navigationView;
 
+    //icons
+    private MenuItem mDeleteFromPlayListIcon;
+    private MenuItem mAddToPlayListIcon;
+
+    private AllSongsCursorAdapter listAdapter;
+
+
     private Dialogs appDialogs;
 
     private HashMap<String,Integer> playlistNames = new HashMap<>();
-
     private String CurrentVisiblePlaylist;
 
     private boolean gotPermissions = false;
     private boolean isPlaylistSong = false;
 
+    private int mCurrentState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +75,7 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+        final ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
             @Override
             public void onDrawerOpened(View drawerView) {
@@ -81,7 +87,7 @@ public class MainActivity extends AppCompatActivity
         toggle.syncState();
 
 
-
+        //init views and items.
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
@@ -89,45 +95,15 @@ public class MainActivity extends AppCompatActivity
 
         listView = (ListView) findViewById(R.id.list_view);
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Cursor MediaDB = (Cursor) parent.getItemAtPosition(position);
-                playWithDefaultMediaPlayer(MediaDB);
-            }
-        });
 
-        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-
-                // Start an alpha animation for clicked item
-                Animation animation1 = new AlphaAnimation(0.3f, 1.0f);
-                animation1.setDuration(4000);
-                view.startAnimation(animation1);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                        !Settings.System.canWrite(getApplicationContext())){
-                    Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
-                    intent.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                }
-                else
-                {
-                    Cursor MediaDB = (Cursor) parent.getItemAtPosition(position);
-                    AlarmSelectorService.setMediaAsDefaultRingtone(getApplicationContext(),MediaDB,isPlaylistSong);
-                }
-
-                return true;
-            }
-        });
-
-
+        setOnClickListiners(listView);
+        setOnScrollStateChanged(listView);
         appDialogs = new Dialogs(this);
         requestPermission();
 
     }
+
+
 
     @Override
     protected void onStart() {
@@ -148,7 +124,7 @@ public class MainActivity extends AppCompatActivity
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // permission was granted, yay! set ListView Adapter
                     gotPermissions = true;
-                    listView.setAdapter(new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true));
+                    listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true)));
                     setPlayListsAsMenuItem(navigationView);
                 } else {
                     //TODO put an explanation dialog
@@ -172,9 +148,18 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        setAppBarIconsVisibility(listAdapter.getNumberOfPressedItems() > 0);
+        return true;
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+        mAddToPlayListIcon = menu.findItem(R.id.action_add_to_playlist);
+        mDeleteFromPlayListIcon = menu.findItem(R.id.action_delete_from_playlist);
+
         return true;
     }
 
@@ -192,6 +177,37 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.action_create_playlist){
             appDialogs.showCreatePlayListDialog();
         }
+        if (id == R.id.help_button){
+            Intent intent = new Intent(this,HelpActivity.class);
+            startActivity(intent);
+        }
+        if (id == R.id.action_add_to_playlist || id == R.id.action_delete_from_playlist){
+            AllSongsCursorAdapter cursorAdapter = (AllSongsCursorAdapter)listView.getAdapter();
+            Cursor songCursor = cursorAdapter.getCursor();
+            songCursor.moveToFirst();
+
+            ArrayList<Integer> selectedItemsVector = new ArrayList<>(listAdapter.getSelectedVector());
+
+            if(!selectedItemsVector.isEmpty())
+            {
+                if (id == R.id.action_add_to_playlist) {
+                    appDialogs.showAddToPlayList(playlistNames, songCursor,selectedItemsVector);
+                } else {
+                    appDialogs.showAreYouSureDialog("", CurrentVisiblePlaylist, songCursor, playlistNames,selectedItemsVector);
+                }
+
+                for (Integer i : selectedItemsVector) {
+                    listAdapter.removeSelectedPosition(i);
+                }
+
+                listAdapter.notifyDataSetChanged();
+                MainActivity.this.invalidateOptionsMenu();
+            }
+
+
+        }
+
+
 
         return super.onOptionsItemSelected(item);
     }
@@ -210,7 +226,7 @@ public class MainActivity extends AppCompatActivity
         }else if(name.equals(getString(R.string.all_songs))) {
             playlist = PlayListManager.getAllMedia(this);
             isPlaylistSong = false;
-            listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
+            listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,playlist,true)));
             CurrentVisiblePlaylist = name;
         }else{
             try
@@ -222,8 +238,10 @@ public class MainActivity extends AppCompatActivity
                 playlist = PlayListManager.getPlaylistSongs(this,id);
                 isPlaylistSong = true;
 
-                listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
+                listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,playlist,true)));
                 CurrentVisiblePlaylist = name;
+                listAdapter.clearSelected();
+                MainActivity.this.invalidateOptionsMenu();
 
             } catch ( IllegalArgumentException e){
                 Log.e(TAG, getString(R.string.cant_find_playlists),e);
@@ -235,6 +253,7 @@ public class MainActivity extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
 
     public void setMediaPathAsDefaultRingtone(Cursor MediaCursor) throws IllegalArgumentException
     {
@@ -287,7 +306,7 @@ public class MainActivity extends AppCompatActivity
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 111);
         }else {
             gotPermissions = true;
-            listView.setAdapter(new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true));
+            listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true)));
             try
             {
                 setPlayListsAsMenuItem(navigationView);
@@ -342,6 +361,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+
     public void onColonClick(final View theView)
     {
         //TODO add on click animation
@@ -360,9 +380,10 @@ public class MainActivity extends AppCompatActivity
         final PopupMenu popupMenu = new PopupMenu(this,theView);
         Menu menu = popupMenu.getMenu();
 
-        menu.add(R.string.play_song);
-        menu.add(R.string.add_to_playlist);
-        menu.add(R.string.delete_from_playlist);
+        //menu.add(R.string.play_song);
+//        menu.add(R.string.add_to_playlist);
+//        menu.add(R.string.delete_from_playlist);
+        menu.add(R.string.set_as_def_ring);
 
         setPlayListsAsMenuItem(navigationView);
 
@@ -370,7 +391,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 String itemName = item.getTitle().toString();
-                if(itemName.equals(getString(R.string.delete_from_playlist))) {
+                /*if(itemName.equals(getString(R.string.delete_from_playlist))) {
                     TextView songName = (TextView) parentRow.findViewById(R.id.title);
                     String songNameS = songName.getText().toString();
                     //TODO check if its not all songs
@@ -378,8 +399,18 @@ public class MainActivity extends AppCompatActivity
 
                 }else if(itemName.equals(getString(R.string.add_to_playlist))) {
                     appDialogs.showAddToPlayList(playlistNames,songCursor);
-                }else if(itemName.equals(getString(R.string.play_song))){
-                    playWithDefaultMediaPlayer(songCursor);
+                }else */if(itemName.equals(getString(R.string.set_as_def_ring))){
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                            !Settings.System.canWrite(getApplicationContext())){
+                        Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                        intent.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } else {
+                        AlarmSelectorService.setMediaAsDefaultRingtone(getApplicationContext(),songCursor,isPlaylistSong);
+                    }
+
+
                 }
 
                 popupMenu.dismiss();
@@ -388,6 +419,24 @@ public class MainActivity extends AppCompatActivity
         });
 
         popupMenu.show();
+    }
+
+//    public void onAddToPlayListClick(final View theView)
+//    {
+//        //get Cursor from view
+//        View parentRow = (View) theView.getParent();
+//        ListView listView = (ListView) parentRow.getParent();
+//        int position = listView.getPositionForView(parentRow);
+//        AllSongsCursorAdapter cursorAdapter = (AllSongsCursorAdapter)listView.getAdapter();
+//        Cursor songCursor = cursorAdapter.getCursor();
+//        songCursor.moveToPosition(position);
+//
+//        appDialogs.showAddToPlayList(playlistNames,songCursor);
+//    }
+
+    public void onAddToPlayLIstFabClick(final View view)
+    {
+        appDialogs.showCreatePlayListDialog();
     }
 
     public void playWithDefaultMediaPlayer(Cursor MediaCursor)
@@ -402,5 +451,79 @@ public class MainActivity extends AppCompatActivity
         startActivity(intent);
     }
 
+    public void setAppBarIconsVisibility(boolean visible)
+    {
+        mAddToPlayListIcon.setVisible(visible);
+        mDeleteFromPlayListIcon.setVisible(visible);
+    }
+
+
+    void setOnScrollStateChanged(final ListView mList)
+    {
+        mList.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView absListView, int state) {
+
+                if (state == SCROLL_STATE_IDLE && mCurrentState != state && mList.isFastScrollEnabled()){
+
+                    mList.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            mList.setFastScrollEnabled(false);
+                        }
+                    },1000);
+
+                }
+
+                mCurrentState = state;
+            }
+
+            @Override
+            public void onScroll(AbsListView absListView, int i, int i1, int i2) {
+                if (mCurrentState == SCROLL_STATE_TOUCH_SCROLL) {
+
+
+                    if (!mList.isFastScrollEnabled())
+                        mList.setFastScrollEnabled(true);
+                }
+            }
+        });
+    }
+
+    public void setOnClickListiners(ListView listView)
+    {
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Cursor MediaDB = (Cursor) parent.getItemAtPosition(position);
+                playWithDefaultMediaPlayer(MediaDB);
+            }
+        });
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+
+                // Start an alpha animation for clicked item
+                Animation animation1 = new AlphaAnimation(0.3f, 1.0f);
+                animation1.setDuration(4000);
+                view.startAnimation(animation1);
+
+                // add\delete item position to selected items position array
+                if(!listAdapter.AddSelectedPosition(position))
+                {
+                    listAdapter.removeSelectedPosition(position);
+
+                }
+                // update list
+                listAdapter.notifyDataSetChanged();
+
+                //restart Option Menu
+                MainActivity.this.invalidateOptionsMenu();
+
+                return true;
+            }
+        });
+    }
 
 }

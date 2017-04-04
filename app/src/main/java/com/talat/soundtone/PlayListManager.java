@@ -6,7 +6,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.annotation.Nullable;
 import android.util.Log;
+
+import java.util.ArrayList;
 
 
 class PlayListManager {
@@ -164,7 +167,7 @@ class PlayListManager {
         resolver.delete(MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI, where, whereVal);
     }
 
-    static void addToPlayList(Context context, Integer playListID, Cursor song)
+    static void addToPlayList(Context context, Integer playListID, Cursor song, @Nullable ArrayList<Integer> positionsVec)
     {
         //get playlist Uri
         Uri playListUri = MediaStore.Audio.Playlists.Members.getContentUri("external", playListID);
@@ -173,31 +176,66 @@ class PlayListManager {
         };
 
         Cursor playList = context.getContentResolver().query(playListUri,projection,null,null,null);
+        assert playList != null;
         playList.moveToFirst();
         final int base = playList.getInt(0);
         playList.close();
 
-        //get song AudioID
-        int audioId = song.getInt(song.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
+        if(positionsVec != null)
+        {
+            for(Integer i :positionsVec){
+                if(song.moveToPosition(i))
+                {
+                    //get song AudioID
+                    int audioId = song.getInt(song.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
 
-        //create song contentValue Audio_ID=songID
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.Audio.Playlists.Members.PLAY_ORDER, base + audioId);
-        //add song to playlist
-        values.put(MediaStore.Audio.Playlists.Members.AUDIO_ID, audioId);
-        context.getContentResolver().insert(playListUri, values);
+                    //create song contentValue Audio_ID=songID
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Audio.Playlists.Members.PLAY_ORDER, base + audioId);
+                    //add song to playlist
+                    values.put(MediaStore.Audio.Playlists.Members.AUDIO_ID, audioId);
+                    context.getContentResolver().insert(playListUri, values);
+                }
+            }
+        }else{
+            //get song AudioID
+            int audioId = song.getInt(song.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
+
+            //create song contentValue Audio_ID=songID
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Audio.Playlists.Members.PLAY_ORDER, base + audioId);
+            //add song to playlist
+            values.put(MediaStore.Audio.Playlists.Members.AUDIO_ID, audioId);
+            context.getContentResolver().insert(playListUri, values);
+        }
+
 
     }
 
-    static void removeFromPlayList(Context context, Integer playListID, Cursor song)
+    static void removeFromPlayList(Context context, Integer playListID, Cursor song, @Nullable ArrayList<Integer> positionsVec)
     {
         //get playlist Uri
         Uri playListUri = MediaStore.Audio.Playlists.Members.getContentUri("external", playListID);
 
-        //get song AudioID
-        int audioId = song.getInt(song.getColumnIndex(MediaStore.Audio.Playlists.Members.AUDIO_ID));
-        //remove song by Audio_ID
-        context.getContentResolver().delete(playListUri,MediaStore.Audio.Playlists.Members.AUDIO_ID +" = ?",new String[] {String.valueOf(audioId)});
+        if(positionsVec != null)
+        {
+            for(Integer i :positionsVec) {
+                if (song.moveToPosition(i)) {
+                    //get song AudioID
+                    int audioId = song.getInt(song.getColumnIndex(MediaStore.Audio.Playlists.Members.AUDIO_ID));
+                    //remove song by Audio_ID
+                    context.getContentResolver().delete(playListUri,MediaStore.Audio.Playlists.Members.AUDIO_ID +" = ?",new String[] {String.valueOf(audioId)});
+
+                }
+
+            }
+        }else{
+            //get song AudioID
+            int audioId = song.getInt(song.getColumnIndex(MediaStore.Audio.Playlists.Members.AUDIO_ID));
+            //remove song by Audio_ID
+            context.getContentResolver().delete(playListUri,MediaStore.Audio.Playlists.Members.AUDIO_ID +" = ?",new String[] {String.valueOf(audioId)});
+
+        }
     }
 
 

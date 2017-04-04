@@ -3,4 +3,7 @@
     <color name="colorPrimary">#546E7A</color>
     <color name="colorPrimaryDark">#37474F</color>
     <color name="colorAccent">#00838F</color>
+    <color name="listItemColor">#B0BEC5</color>
+    <color name="listItemColorPressed">#ced9df</color>
+    <color name="colorAlbumBack">#546E7A</color>
 </resources>
