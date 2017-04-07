@@ -7,7 +7,7 @@
         android:title="@string/add_to_playlist_button"
         android:icon="@drawable/add_playlist"
         android:visible="false"
-        app:showAsAction="always" />
+        app:showAsAction="always|collapseActionView" />
 
     <item
         android:id="@+id/action_delete_from_playlist"
@@ -15,7 +15,7 @@
         android:title="@string/delete_from_playlist"
         android:icon="@drawable/rubbish_bin"
         android:visible="false"
-        app:showAsAction="always" />
+        app:showAsAction="always|collapseActionView" />
 
     <item
     android:id="@+id/action_create_playlist"
@@ -37,8 +37,8 @@
 
     <item android:id="@+id/search"
         android:title="Search"
-        android:icon="@drawable/ic_search_black_24dp"
+        android:icon="@drawable/ic_search_white_24dp"
         app:showAsAction="collapseActionView|ifRoom"
-        android:actionViewClass="android.widget.SearchView" />
+        app:actionViewClass="android.widget.SearchView" />
 
 </menu>

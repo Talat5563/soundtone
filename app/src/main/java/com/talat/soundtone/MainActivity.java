@@ -1,6 +1,7 @@
 package com.talat.soundtone;
 
 import android.Manifest;
+import android.app.SearchManager;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -23,6 +24,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
+
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
@@ -34,6 +36,7 @@ import android.view.animation.Animation;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,6 +68,7 @@ public class MainActivity extends AppCompatActivity
     private boolean gotPermissions = false;
     private boolean isPlaylistSong = false;
 
+    //fast scroll hack
     private int mCurrentState;
 
     @Override
@@ -124,7 +128,7 @@ public class MainActivity extends AppCompatActivity
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // permission was granted, yay! set ListView Adapter
                     gotPermissions = true;
-                    listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true)));
+                    listView.setAdapter(new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true));
                     setPlayListsAsMenuItem(navigationView);
                 } else {
                     //TODO put an explanation dialog
@@ -149,7 +153,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        setAppBarIconsVisibility(listAdapter.getNumberOfPressedItems() > 0);
+        if(listView !=null &&  listView.getAdapter() != null)
+        {
+            setAppBarIconsVisibility(((AllSongsCursorAdapter)listView.getAdapter()).getNumberOfPressedItems() > 0);
+        }
         return true;
     }
 
@@ -159,6 +166,19 @@ public class MainActivity extends AppCompatActivity
         getMenuInflater().inflate(R.menu.main, menu);
         mAddToPlayListIcon = menu.findItem(R.id.action_add_to_playlist);
         mDeleteFromPlayListIcon = menu.findItem(R.id.action_delete_from_playlist);
+
+        SearchManager searchManager = (SearchManager)
+                getSystemService(Context.SEARCH_SERVICE);
+
+        MenuItem searchMenuItem = menu.findItem(R.id.search);
+        SearchView searchView = (SearchView) searchMenuItem.getActionView();
+
+        searchView.setSearchableInfo(searchManager.
+                getSearchableInfo(getComponentName()));
+        searchView.setSubmitButtonEnabled(false);
+        searchView.setIconifiedByDefault(false);
+
+        searchView.setOnQueryTextListener(new ListViewQueryListener(this,listView));
 
         return true;
     }
@@ -186,21 +206,21 @@ public class MainActivity extends AppCompatActivity
             Cursor songCursor = cursorAdapter.getCursor();
             songCursor.moveToFirst();
 
-            ArrayList<Integer> selectedItemsVector = new ArrayList<>(listAdapter.getSelectedVector());
+            ArrayList<Integer> selectedItemsVector = new ArrayList<Integer>(((AllSongsCursorAdapter)listView.getAdapter()).getSelectedVector());
 
             if(!selectedItemsVector.isEmpty())
             {
                 if (id == R.id.action_add_to_playlist) {
                     appDialogs.showAddToPlayList(playlistNames, songCursor,selectedItemsVector);
                 } else {
-                    appDialogs.showAreYouSureDialog("", CurrentVisiblePlaylist, songCursor, playlistNames,selectedItemsVector);
+                    appDialogs.showAreYouSureDialog("", CurrentVisiblePlaylist.toString(), songCursor, playlistNames,selectedItemsVector);
                 }
 
                 for (Integer i : selectedItemsVector) {
-                    listAdapter.removeSelectedPosition(i);
+                    ((AllSongsCursorAdapter)listView.getAdapter()).removeSelectedPosition(i);
                 }
 
-                listAdapter.notifyDataSetChanged();
+                ((AllSongsCursorAdapter)listView.getAdapter()).notifyDataSetChanged();
                 MainActivity.this.invalidateOptionsMenu();
             }
 
@@ -226,7 +246,7 @@ public class MainActivity extends AppCompatActivity
         }else if(name.equals(getString(R.string.all_songs))) {
             playlist = PlayListManager.getAllMedia(this);
             isPlaylistSong = false;
-            listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,playlist,true)));
+            listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
             CurrentVisiblePlaylist = name;
         }else{
             try
@@ -238,9 +258,9 @@ public class MainActivity extends AppCompatActivity
                 playlist = PlayListManager.getPlaylistSongs(this,id);
                 isPlaylistSong = true;
 
-                listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,playlist,true)));
+                listView.setAdapter(new AllSongsCursorAdapter(this,playlist,true));
                 CurrentVisiblePlaylist = name;
-                listAdapter.clearSelected();
+                ((AllSongsCursorAdapter)listView.getAdapter()).clearSelected();
                 MainActivity.this.invalidateOptionsMenu();
 
             } catch ( IllegalArgumentException e){
@@ -306,7 +326,7 @@ public class MainActivity extends AppCompatActivity
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 111);
         }else {
             gotPermissions = true;
-            listView.setAdapter((listAdapter = new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true)));
+            listView.setAdapter(new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true));
             try
             {
                 setPlayListsAsMenuItem(navigationView);
@@ -434,6 +454,19 @@ public class MainActivity extends AppCompatActivity
 //        appDialogs.showAddToPlayList(playlistNames,songCursor);
 //    }
 
+        public void onAlbumImageClick(final View theView)
+    {
+        //get Cursor from view
+        View parentRow = (View) theView.getParent();
+        ListView listView = (ListView) parentRow.getParent();
+        int position = listView.getPositionForView(parentRow);
+        AllSongsCursorAdapter cursorAdapter = (AllSongsCursorAdapter)listView.getAdapter();
+        Cursor songCursor = cursorAdapter.getCursor();
+        songCursor.moveToPosition(position);
+
+        playWithDefaultMediaPlayer(songCursor);
+    }
+
     public void onAddToPlayLIstFabClick(final View view)
     {
         appDialogs.showCreatePlayListDialog();
@@ -490,40 +523,54 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    public void setOnClickListiners(ListView listView)
+    public void setOnClickListiners(final ListView listView)
     {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Cursor MediaDB = (Cursor) parent.getItemAtPosition(position);
-                playWithDefaultMediaPlayer(MediaDB);
+                if(((AllSongsCursorAdapter)listView.getAdapter()).getNumberOfPressedItems() > 0)
+                {
+                    chooseAListItem(view,position);
+                }else{
+                    Cursor MediaDB = (Cursor) parent.getItemAtPosition(position);
+                    playWithDefaultMediaPlayer(MediaDB);
+                }
             }
         });
 
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-
-                // Start an alpha animation for clicked item
-                Animation animation1 = new AlphaAnimation(0.3f, 1.0f);
-                animation1.setDuration(4000);
-                view.startAnimation(animation1);
-
-                // add\delete item position to selected items position array
-                if(!listAdapter.AddSelectedPosition(position))
-                {
-                    listAdapter.removeSelectedPosition(position);
-
-                }
-                // update list
-                listAdapter.notifyDataSetChanged();
-
-                //restart Option Menu
-                MainActivity.this.invalidateOptionsMenu();
-
+                chooseAListItem(view,position);
                 return true;
             }
         });
+    }
+
+    public void chooseAListItem(View view,int position)
+    {
+        // Start an alpha animation for clicked item
+        Animation animation1 = new AlphaAnimation(0.3f, 1.0f);
+        animation1.setDuration(1000);
+        view.startAnimation(animation1);
+
+        // add\delete item position to selected items position array
+        if(!((AllSongsCursorAdapter)listView.getAdapter()).AddSelectedPosition(position))
+        {
+            ((AllSongsCursorAdapter)listView.getAdapter()).removeSelectedPosition(position);
+
+        }
+        // update list
+        ((AllSongsCursorAdapter)listView.getAdapter()).notifyDataSetChanged();
+
+        //restart Option Menu
+        MainActivity.this.invalidateOptionsMenu();
+
+    }
+
+    public String getCurrentPlayListName()
+    {
+        return CurrentVisiblePlaylist;
     }
 
 }

@@ -134,6 +134,7 @@ class Dialogs {
                     playListToAdd[0] = playlistNames.get(name);
                     PlayListManager.addToPlayList(context,playListToAdd[0],songCursor, positionsVec);
                 }
+                dialog.dismiss();
             }
         });
 

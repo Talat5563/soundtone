@@ -14,6 +14,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CursorAdapter;
+import android.widget.FilterQueryProvider;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -30,6 +32,8 @@ public class AllSongsCursorAdapter extends CursorAdapter {
 
     private HashSet<Integer> selectedItemsHash = new HashSet<>();
     private ArrayList<Integer> selectedItemsVector = new ArrayList<>();
+
+    String filter = "";
 
     public AllSongsCursorAdapter(Context context, Cursor c, boolean autoRequery) {
         super(context, c, autoRequery);
@@ -160,6 +164,8 @@ public class AllSongsCursorAdapter extends CursorAdapter {
         }
     }
 
-
-
+    public void setFilter(String s)
+    {
+        filter = s;
+    }
 }

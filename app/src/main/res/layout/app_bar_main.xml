@@ -29,7 +29,7 @@
         android:layout_margin="@dimen/fab_margin"
         android:onClick="onAddToPlayLIstFabClick"
         app:backgroundTint="@color/colorAlbumBack"
-        app:srcCompat="@drawable/ic_library_add_black_24dp" />
+        app:srcCompat="@drawable/ic_library_add_white_24dp" />
 
     <include layout="@layout/content_main" />
 

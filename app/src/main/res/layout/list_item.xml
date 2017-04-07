@@ -15,7 +15,8 @@
         android:padding="3dip"
         android:layout_alignParentStart="true"
         android:background="@color/colorAlbumBack"
-        android:layout_marginEnd="5dip">
+        android:layout_marginEnd="5dip"
+        android:onClick="onAlbumImageClick">
 
         <ImageView
             android:id="@+id/list_image"

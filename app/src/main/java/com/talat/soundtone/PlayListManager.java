@@ -37,6 +37,30 @@ class PlayListManager {
         return contentResolver.query(uri,projection,selection,null,order);
     }
 
+    static Cursor getAllMedia(Context context, String constrains)
+    {
+        ContentResolver contentResolver= context.getContentResolver();
+        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
+        String[] projection = new String[] {
+                MediaStore.Audio.Media.TITLE,
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.ALBUM,
+                MediaStore.Audio.Media.ALBUM_ID,
+                MediaStore.Audio.Media.ARTIST,
+                MediaStore.Audio.Media.ARTIST_ID,
+                MediaStore.Audio.Media.DURATION,
+                MediaStore.Audio.Media.DATA
+        };
+        String order = MediaStore.Audio.Media.TITLE + " ASC";
+
+        selection += " AND " + "(" + MediaStore.Audio.Playlists.Members.TITLE + " LIKE "+"'%" + constrains + "%'" +
+                " OR " + MediaStore.Audio.Playlists.Members.ARTIST + " LIKE "+"'%" + constrains + "%'" +
+                " OR " + MediaStore.Audio.Playlists.Members.ALBUM + " LIKE "+"'%" + constrains + "%'" + ")";
+
+        return contentResolver.query(uri,projection,selection,null,order);
+    }
+
 
     static Cursor getPlaylist(Context context, Integer PlaylistID)
     {
@@ -103,6 +127,38 @@ class PlayListManager {
                 MediaStore.Audio.Playlists.Members.DURATION,
                 MediaStore.Audio.Playlists.Members.DATA
         };
+
+        Log.i(TAG,"querying");
+        return context.getContentResolver().query(playListUri,projection,selection,null,
+                null);
+    }
+
+    static Cursor getPlaylistSongs(Context context, Integer PlaylistID, String constrains)
+    {
+        Log.i(TAG,"geting Playlist Songs- id = " + PlaylistID);
+        Uri playListUri = MediaStore.Audio.Playlists.Members.getContentUri("external",PlaylistID);
+        Log.i(TAG,"Got Playlist URI" + playListUri);
+        String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
+        String[] projection = new String[] {
+                MediaStore.Audio.Playlists.Members._ID,
+                MediaStore.Audio.Playlists.Members.TITLE,
+                MediaStore.Audio.Playlists.Members.AUDIO_ID,
+                MediaStore.Audio.Playlists.Members.ALBUM,
+                MediaStore.Audio.Playlists.Members.ALBUM_ID,
+                MediaStore.Audio.Playlists.Members.ARTIST,
+                MediaStore.Audio.Playlists.Members.ARTIST_ID,
+                MediaStore.Audio.Playlists.Members.DURATION,
+                MediaStore.Audio.Playlists.Members.DATA
+        };
+
+//        for(Character c : constrains.toCharArray())
+//        {
+//
+//        }
+
+        selection += " AND " + "(" + MediaStore.Audio.Playlists.Members.TITLE + " LIKE "+"'%" + constrains + "%'" +
+                    " OR " + MediaStore.Audio.Playlists.Members.ARTIST + " LIKE "+"'%" + constrains + "%'" +
+                    " OR " + MediaStore.Audio.Playlists.Members.ALBUM + " LIKE "+"'%" + constrains + "%'" + ")";
 
         Log.i(TAG,"querying");
         return context.getContentResolver().query(playListUri,projection,selection,null,
