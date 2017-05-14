@@ -2,6 +2,7 @@ package com.talat.soundtone;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.ListView;
@@ -36,7 +37,7 @@ public class ListViewQueryListener implements SearchView.OnQueryTextListener {
 
         Cursor playlist;
         String playListName = ((MainActivity)context).getCurrentPlayListName();
-
+        s = escapeString(s);
         if(playListName.equals(context.getString(R.string.all_songs)))
         {
             playlist = PlayListManager.getAllMedia(context,s);
@@ -51,5 +52,10 @@ public class ListViewQueryListener implements SearchView.OnQueryTextListener {
         aListView.setAdapter(new AllSongsCursorAdapter(context,playlist,true));
 
         return true;
+    }
+
+    public String escapeString(String s)
+    {
+        return s.replaceAll("'","");
     }
 }

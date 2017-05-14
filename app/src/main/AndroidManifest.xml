@@ -8,17 +8,18 @@
     <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <!--<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>-->
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher_trans"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/splashScreenTheme">
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/splashScreenTheme">
             <meta-data
                 android:name="com.talat.soundtone.MainActivity"
                 android:resource="@xml/searchable">
@@ -46,6 +47,8 @@
                 <action android:name="com.motorola.blur.alarmclock.AlarmTimerAlert" />
                 <action android:name="com.android.alarmclock.AlarmClock" />
                 <action android:name="com.android.alarmclock.ALARM_ALERT" />
+                <action android:name="com.samsung.sec.android.clockpackage.alarm.ALARM_ALERT"/>
+                <action android:name="com.lge.alarm.alarmclocknew"/>
             </intent-filter>
         </receiver>
 

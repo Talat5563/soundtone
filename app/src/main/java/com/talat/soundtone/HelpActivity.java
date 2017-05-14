@@ -1,11 +1,15 @@
 package com.talat.soundtone;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.method.ScrollingMovementMethod;
 import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
 
 public class HelpActivity extends AppCompatActivity {
 
@@ -14,14 +18,27 @@ public class HelpActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_help);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        TextView textView = (TextView) findViewById(R.id.help_text);
+        textView.setMovementMethod(new ScrollingMovementMethod());
         setSupportActionBar(toolbar);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show();
+
+                Intent i = new Intent(Intent.ACTION_SEND);
+                i.setType("message/rfc822");
+                i.putExtra(Intent.EXTRA_EMAIL  , new String[]{"soundtoneapp@gmail.com"});
+                i.putExtra(Intent.EXTRA_SUBJECT, "Dear SoundTone... (Edit this)");
+                i.putExtra(Intent.EXTRA_TEXT   , "Regards. (Your Name)");
+                try {
+                    startActivity(Intent.createChooser(i, "Send mail..."));
+                } catch (android.content.ActivityNotFoundException ex) {
+                    Toast.makeText(HelpActivity.this, "There are no email clients installed.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);

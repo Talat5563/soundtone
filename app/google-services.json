@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "537438622570",
+    "firebase_url": "https://soundtone-bb3b9.firebaseio.com",
+    "project_id": "soundtone-bb3b9",
+    "storage_bucket": "soundtone-bb3b9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537438622570:android:aa75ade8c6ebcf81",
+        "android_client_info": {
+          "package_name": "com.talat.soundtone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "537438622570-i6oq4oqgc45uk2ult1ooci82pct1sp86.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.talat.soundtone",
+            "certificate_hash": "c0c941de9e67ccc97294b2566c388fbdbb0f24db"
+          }
+        },
+        {
+          "client_id": "537438622570-rlro7ol34mit8tt8h1t14u83ftnk057h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcIGR0MytFhPEUcfEpYXV_XeHt1_xw0ZM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "537438622570-rlro7ol34mit8tt8h1t14u83ftnk057h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

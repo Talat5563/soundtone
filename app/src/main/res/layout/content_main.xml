@@ -2,6 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:id="@+id/content_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,6 +10,7 @@
     tools:context="com.talat.soundtone.MainActivity"
     android:background="#B0BEC5"
     tools:showIn="@layout/app_bar_main">
+
 
     <ListView
         android:id="@+id/list_view"
@@ -23,5 +25,26 @@
         android:scrollingCache="false"
         android:scrollbarSize="20dip"
         android:longClickable="true"/>
+
+    <TextView
+        android:id="@+id/playlist_name_tag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/rounded_corners"
+        android:text="All Songs PLayList"
+        android:visibility="gone"
+        />
+
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        ads:adSize="BANNER"
+        android:visibility="gone"
+        ads:adUnitId="@string/banner_ad_unit_id">
+    </com.google.android.gms.ads.AdView>
 
 </RelativeLayout>

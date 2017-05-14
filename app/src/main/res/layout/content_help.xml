@@ -47,7 +47,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:text="@string/help_text"/>
+            android:textAlignment="center"
+            android:textColor="@android:color/black"
+            android:text="@string/help_text"
+            android:scrollbars="vertical"
+            android:maxLines="18"/>
 
     </RelativeLayout>
 

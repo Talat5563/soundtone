@@ -1,6 +1,8 @@
 package com.talat.soundtone;
 
 import android.app.IntentService;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -8,13 +10,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.PixelFormat;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
 import android.provider.MediaStore;
+import android.provider.Settings;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.util.Random;
+import java.util.logging.LogRecord;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -30,6 +43,7 @@ public class AlarmSelectorService extends IntentService {
     private static final String EXTRA_PLAYLIST = "com.talat.soundtone.extra.PARAM1";
 
     private boolean isPlaylistSong = true;
+    int mId = 739;
 
 
     public AlarmSelectorService() {
@@ -81,12 +95,26 @@ public class AlarmSelectorService extends IntentService {
                 if(songCursor.moveToPosition(randomNamber))
                 {
                     Log.i(TAG,"Song at random position" + randomNamber + " success");
-                    setMediaAsDefaultRingtone(this,songCursor,isPlaylistSong);
+                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                    {
+                        if(Settings.System.canWrite(this))
+                            setMediaAsDefaultRingtone(this,songCursor,isPlaylistSong);
+                        else
+                            notifyUserDefaultToneChanged("Can't Change default ringtone.",
+                                    "please start SoundTone and approve all permissions");
+                    }else{
+                        setMediaAsDefaultRingtone(this,songCursor,isPlaylistSong);
+                    }
+
                 }else{
                     Log.i(TAG,"Song at random position" + randomNamber + " failed!!!!!!");
                 }
 //                }
             }
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//                if (Settings.canDrawOverlays(this))
+//                    addViewToScreen();
+//            }
         }
     }
 
@@ -140,7 +168,7 @@ public class AlarmSelectorService extends IntentService {
                     values,
                     MediaStore.MediaColumns.DATA + "=\"" +oldMediaFilePath +"\"", null);
 
-            Toast.makeText(context,"Changed " + oldMediaFilePath + " to not be an alarm",Toast.LENGTH_SHORT).show();
+            //Toast.makeText(context,"Changed " + oldMediaFilePath + " to not be an alarm",Toast.LENGTH_SHORT).show();
         }
 
         //update new media path value MediaStore.Audio.Media.IS_ALARM true
@@ -169,8 +197,75 @@ public class AlarmSelectorService extends IntentService {
 
         //set new media path as default ringtone
         RingtoneManager.setActualDefaultRingtoneUri(context,RingtoneManager.TYPE_ALARM,newMediaUri);
-        Toast.makeText(context,newMediaPath + " has been set as default ringtone",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(context,newMediaPath + " has been set as default ringtone",Toast.LENGTH_SHORT).show();
+        String Title = "Default AlarmTone changed";
+        String Text = "SoundTone has changed your default alarm tone to " +newMediaPath
+                + "\nCreate more playlists";
+        if(context instanceof AlarmSelectorService)
+        {
+            ((AlarmSelectorService)context).notifyUserDefaultToneChanged(Title,Text);
+        }
         sharedPreferences.edit().putString("OLD_FILE_PATH",newMediaPath).apply();
+    }
+
+    void addViewToScreen()
+    {
+        LayoutInflater li = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+        final WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                //WindowManager.LayoutParams.TYPE_INPUT_METHOD |
+                WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,// | WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH //| WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                ,PixelFormat.TRANSLUCENT);
+
+        params.gravity = Gravity.BOTTOM | Gravity.CENTER;
+        final View adView = li.inflate(R.layout.adoverlay_layout, null);
+
+        wm.addView(adView, params);
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            Log.d(TAG,"Sleep was interrupted");
+        }
+
+        wm.removeView(adView);
+
+    }
+
+    void notifyUserDefaultToneChanged(String Title ,String text)
+    {
+        NotificationCompat.Builder mBuilder =
+            new NotificationCompat.Builder(this)
+                    .setSmallIcon(R.drawable.logo_orange_transparen)
+                    .setContentTitle(Title)
+                    .setContentText(text)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(text));
+
+        // Creates an explicit intent for an Activity in your app
+        Intent resultIntent = new Intent(this, MainActivity.class);
+
+        // The stack builder object will contain an artificial back stack for the
+        // started Activity.
+        // This ensures that navigating backward from the Activity leads out of
+        // your application to the Home screen.
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        // Adds the back stack for the Intent (but not the Intent itself)
+        stackBuilder.addParentStack(MainActivity.class);
+        // Adds the Intent that starts the Activity to the top of the stack
+        stackBuilder.addNextIntent(resultIntent);
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+        mBuilder.setContentIntent(resultPendingIntent);
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        // mId allows you to update the notification later on.
+        mNotificationManager.cancel(mId);
+        mNotificationManager.notify(mId, mBuilder.build());
     }
 
 }

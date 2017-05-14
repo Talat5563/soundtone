@@ -93,10 +93,27 @@
     <string name="no_playlists_to_show">No playlists to show</string>
     <string name="logo">Logo</string>
     <string name="soundtone">SoundTone</string>
-    <string name="help_text">Help Text - blabla blab ablab ablab</string>
+    <string name="help_text">Hey there, I\'m the guy who developed SoundTone.\n
+                            This is my first app deployed to the App store so First of all, I wanted to thank you, for being here.\n
+                            I\'ve created this app out of a need I had for a long time.\n
+                            waking up every morning with the same short repetitive AlarmTone drove me crazy,\n
+                            after it was done I started wondering why not share it with you?\n
+                            and here we are :)\n\n
+                            so if you have any requests/ideas/will to help/any thing with this project you are welcome to contact me.\n\n
+                            Thanks again. \nSoundTone.
+    </string>
     <string name="all_rights_reserved">© 2017 Tal Atedgi All Rights Reserved</string>
     <string name="help">Help</string>
     <string name="title_activity_help">About Us…</string>
     <string name="add_to_playlist_button">add to playlist</string>
-    <string name="set_as_def_ring">Set as default ringtone</string>
+    <string name="set_as_def_ring">Set as default AlarmTone</string>
+    <string name="playlist_was_set">PlayList was set as default ringtone</string>
+    <string name="about">About…</string>
+    <string name="banner_ad_unit_id">ca-app-pub-3128271444383185/7721408754</string>
+    <string name="banner_ad_unit_id_test">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="native_ad_init_id">ca-app-pub-3128271444383185/5687455554</string>
+    <string name="sorry_no_settings">Sorry. I still didn\'t get the chance to build a Setting page, if you have any settings requests or any input at all please let me know through the about page…</string>
+    <string name="no_settings_yet">No Settings Yet…</string>
+    <string name="choose_this_song">Choose this song…</string>
+    <string name="ok">OK</string>
 </resources>

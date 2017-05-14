@@ -2,26 +2,38 @@ package com.talat.soundtone;
 
 
 import android.app.Dialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Toast;
+
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.NativeExpressAdView;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
+import static com.talat.soundtone.MainActivity.AUTO_STAT_PERMISSION_GRANTED;
 import static com.talat.soundtone.MainActivity.CHOSEN_PLAYLIST;
 
 class Dialogs {
@@ -93,6 +105,10 @@ class Dialogs {
                 SharedPreferences sharedPreferences = context.getSharedPreferences(context.getPackageName(), Context.MODE_PRIVATE);
                 sharedPreferences.edit().putInt(CHOSEN_PLAYLIST,chosenPlayList).apply();
                 dialog.dismiss();
+                Toast.makeText(context, R.string.playlist_was_set,Toast.LENGTH_LONG).show();
+                ((MainActivity)context).setPlayListsAsMenuItem(((MainActivity) context).navigationView);
+                AlarmSelectorService.startActionNextAlarm(context,chosenPlayList);
+                showMakesSureYoursUsingYourDefaultAlarm();
             }
         });
 
@@ -266,5 +282,130 @@ class Dialogs {
         }
     }
 
+    void showNoSettingsPage()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+        View adParentView =  inflater.inflate(R.layout.no_settings_layout, null);
+
+        NativeExpressAdView adView = (NativeExpressAdView) adParentView.findViewById(R.id.native_medium_ad);
+
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adView.loadAd(adRequest);
+
+        builder.setView(adParentView);
+        builder.setTitle(R.string.no_settings_yet);
+        builder.setPositiveButton(R.string.confirm, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        builder.create().show();
+    }
+
+    void showPleaseGrantChangeSettingsPermission()
+    {
+        AlertDialog.Builder builder =new AlertDialog.Builder(context);
+
+        builder.setTitle("Please grant Write-Settings Permission to SoundTone");
+        builder.setMessage("SoundTone Can't preform without the right to change your settings");
+        builder.setPositiveButton(context.getString(R.string.ok), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                openAndroidPermissionsMenu();
+                dialog.dismiss();
+            }
+        });
+
+        builder.create().show();
+    }
+
+    void showPleaseGrantAutoStartPermission()
+    {
+        AlertDialog.Builder builder =new AlertDialog.Builder(context);
+
+        builder.setTitle("Please grant AutoStart Permission to SoundTone");
+        builder.setMessage("SoundTone Can't preform without the right to AutoStart");
+        builder.setPositiveButton(context.getString(R.string.ok), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                //this will open auto start screen where user can enable permission for your app
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"));
+                context.startActivity(intent);
+            }
+        });
+        builder.setNegativeButton("I've Granted that Permission", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                SharedPreferences sharedPreferences = context.getSharedPreferences(context.getPackageName(), Context.MODE_PRIVATE);
+                sharedPreferences.edit().putBoolean(AUTO_STAT_PERMISSION_GRANTED,true).apply();
+                dialog.dismiss();
+            }
+        });
+
+        builder.create().show();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void openAndroidPermissionsMenu() {
+        Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+        intent.setData(Uri.parse("package:" + context.getPackageName()));
+        context.startActivity(intent);
+    }
+
+    void showMakesSureYoursUsingYourDefaultAlarm()
+    {
+        AlertDialog.Builder builder =new AlertDialog.Builder(context);
+
+        builder.setTitle("Make sure you are using a DEFAULT alarm tone");
+        builder.setMessage("SoundTone changes your default alarm tone.\nmake sure you are using it when setting an alarm or in your currently set alarms...");
+        builder.setPositiveButton(context.getString(R.string.ok), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        builder.setNegativeButton("How?", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String how = "how to set alarm as default ringtone ";
+                String deviceManufacturer = android.os.Build.MANUFACTURER;
+                dialog.dismiss();
+                issueGoogleSearch(how + deviceManufacturer);
+            }
+        });
+
+        builder.create().show();
+    }
+
+    void issueGoogleSearch(String what)
+    {
+        Uri uri = Uri.parse("http://www.google.com/#q=" + what);
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        context.startActivity(intent);
+    }
+
+    void showSoundToneCantFunctionWithoutPermissions()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+        builder.setTitle("SoundTone Can't Function Without These Permissions");
+        builder.setMessage("To use SoundTone please restart the app and grant the requested permissions.");
+        builder.setPositiveButton(context.getString(R.string.ok), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                ((MainActivity)context).finish();
+            }
+        });
+
+        builder.create().show();
+    }
 
 }

@@ -7,7 +7,7 @@ android {
         applicationId "com.talat.soundtone"
         minSdkVersion 19
         targetSdkVersion 25
-        versionCode 1
+        versionCode 5
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -29,5 +29,8 @@ dependencies {
     compile 'com.android.support:design:25.1.0'
     compile 'com.android.support:support-v4:25.1.0'
     compile 'com.android.support:support-vector-drawable:25.1.0'
+    compile 'com.google.firebase:firebase-ads:10.2.1'
     testCompile 'junit:junit:4.12'
 }
+
+apply plugin: 'com.google.gms.google-services'

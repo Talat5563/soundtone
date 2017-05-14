@@ -1,6 +1,8 @@
 package com.talat.soundtone;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.SearchManager;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -13,6 +15,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -33,6 +36,7 @@ import android.view.SubMenu;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -40,15 +44,22 @@ import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = "SOUNDTONE-Main";
     static final String CHOSEN_PLAYLIST = "SOUNDTONE-CHOSEN_PLAYLIST";
+    static final String AUTO_STAT_PERMISSION_GRANTED = "soundtone_autostart_perm";
+    static final int OVERLAY_PERMISSION_REQ_CODE = 144;
 
     ListView listView;
     NavigationView navigationView;
@@ -57,8 +68,9 @@ public class MainActivity extends AppCompatActivity
     private MenuItem mDeleteFromPlayListIcon;
     private MenuItem mAddToPlayListIcon;
 
-    private AllSongsCursorAdapter listAdapter;
+    private TextView playListNameTag;
 
+    private AdView mAdView;
 
     private Dialogs appDialogs;
 
@@ -73,6 +85,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.AppTheme_NoActionBar);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -98,13 +111,16 @@ public class MainActivity extends AppCompatActivity
         CurrentVisiblePlaylist = getString(R.string.all_songs);
 
         listView = (ListView) findViewById(R.id.list_view);
+        playListNameTag = (TextView) findViewById(R.id.playlist_name_tag);
+        mAdView = (AdView) findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
 
 
         setOnClickListiners(listView);
         setOnScrollStateChanged(listView);
         appDialogs = new Dialogs(this);
         requestPermission();
-
     }
 
 
@@ -114,6 +130,7 @@ public class MainActivity extends AppCompatActivity
         if(gotPermissions)
         {
             setPlayListsAsMenuItem(navigationView);
+            AppRater.app_launched(this);
         }
         super.onStart();
     }
@@ -131,9 +148,9 @@ public class MainActivity extends AppCompatActivity
                     listView.setAdapter(new AllSongsCursorAdapter(this,PlayListManager.getAllMedia(this),true));
                     setPlayListsAsMenuItem(navigationView);
                 } else {
-                    //TODO put an explanation dialog
-                    finish();
+                    appDialogs.showSoundToneCantFunctionWithoutPermissions();
                 }
+                break;
             }
 
             // other 'case' lines to check for other
@@ -147,7 +164,17 @@ public class MainActivity extends AppCompatActivity
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
-            super.onBackPressed();
+            if(((AllSongsCursorAdapter)listView.getAdapter()).getNumberOfPressedItems() > 0)
+            {
+                ((AllSongsCursorAdapter)listView.getAdapter()).clearSelected();
+                ((AllSongsCursorAdapter)listView.getAdapter()).notifyDataSetChanged();
+                //restart Option Menu
+                MainActivity.this.invalidateOptionsMenu();
+            }
+            else
+            {
+                super.onBackPressed();
+            }
         }
     }
 
@@ -192,6 +219,7 @@ public class MainActivity extends AppCompatActivity
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            appDialogs.showNoSettingsPage();
             return true;
         }
         if (id == R.id.action_create_playlist){
@@ -223,12 +251,7 @@ public class MainActivity extends AppCompatActivity
                 ((AllSongsCursorAdapter)listView.getAdapter()).notifyDataSetChanged();
                 MainActivity.this.invalidateOptionsMenu();
             }
-
-
         }
-
-
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -268,6 +291,8 @@ public class MainActivity extends AppCompatActivity
                 Toast.makeText(this,getString(R.string.cant_find_playlists),Toast.LENGTH_SHORT).show();
             }
         }
+
+        playListNameTag.setText(CurrentVisiblePlaylist + " Playlist");
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -313,11 +338,13 @@ public class MainActivity extends AppCompatActivity
 
         //set new media path as default ringtone
         RingtoneManager.setActualDefaultRingtoneUri(this,RingtoneManager.TYPE_ALARM,newMediaUri);
-        Toast.makeText(this,newMediaPath + " has been set as default ringtone",Toast.LENGTH_SHORT).show();
+        Toast.makeText(this,newMediaPath + " has been set as default AlarmTone",Toast.LENGTH_SHORT).show();
         sharedPreferences.edit().putString("OLD_FILE_PATH",newMediaPath).apply();
     }
 
     public void requestPermission() {
+
+        // permission to read an write to external storage
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -336,18 +363,71 @@ public class MainActivity extends AppCompatActivity
                 Toast.makeText(this,getString(R.string.cant_find_playlists),Toast.LENGTH_SHORT).show();
             }
         }
+
+        // permission to write settings
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            if(!Settings.System.canWrite(this))
+            {
+                appDialogs.showPleaseGrantChangeSettingsPermission();
+            }
+
+            if(ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.MEDIA_CONTENT_CONTROL)
+                    != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.MEDIA_CONTENT_CONTROL}, 112);
+            }
+
+            if(ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.CHANGE_CONFIGURATION)
+                    != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.CHANGE_CONFIGURATION}, 113);
+            }
+
+            if(ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.MODIFY_AUDIO_SETTINGS)
+                    != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.MODIFY_AUDIO_SETTINGS}, 114);
+            }
+        }
+
+        String manufacturer = "xiaomi";
+        if(manufacturer.equalsIgnoreCase(android.os.Build.MANUFACTURER))
+        {
+            SharedPreferences sharedPreferences = getSharedPreferences(getPackageName(), Context.MODE_PRIVATE);
+            if(!sharedPreferences.getBoolean(AUTO_STAT_PERMISSION_GRANTED,false))
+                appDialogs.showPleaseGrantAutoStartPermission();
+        }
+
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            if (!Settings.canDrawOverlays(this)) {
+//                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+//                        Uri.parse("package:" + getPackageName()));
+//                startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE);
+//            }
+//        }
     }
 
 
-    public void setPlayListsAsMenuItem(NavigationView navigationView) throws IllegalArgumentException
+    public void setPlayListsAsMenuItem(NavigationView navigationView)
     {
         Menu menu = navigationView.getMenu();
+
+        //get ChosenPlaylist id
+        SharedPreferences sharedPreferences = getSharedPreferences(getPackageName(), Context.MODE_PRIVATE);
+        int chosenPlaylistId = sharedPreferences.getInt(CHOSEN_PLAYLIST,-1);
 
         SubMenu subMenu = menu.findItem(R.id.playlists).getSubMenu();
         subMenu.clear();
         playlistNames.clear();
         subMenu.add(getString(R.string.all_songs))
-                .setIcon(R.drawable.playlist1);
+                .setIcon(R.drawable.playlist1).setChecked(chosenPlaylistId == -1);
         playlistNames.put(getString(R.string.all_songs),-1);
 
         try(Cursor playlistsCursor = PlayListManager.getPlaylist(this,-1))
@@ -367,7 +447,8 @@ public class MainActivity extends AppCompatActivity
                 final int playListId = playlistsCursor.
                         getInt(playlistsCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists._ID));
                 playlistNames.put(playlistName, playListId);
-                MenuItem item = subMenu.add(playlistName).setIcon(R.drawable.playlist1);
+                MenuItem item = subMenu.add(playlistName).setIcon(R.drawable.playlist1).setChecked(playListId == chosenPlaylistId);
+
                 View LongClickView = new View(this);
                 LongClickView.setOnLongClickListener(new View.OnLongClickListener() {
                     @Override
@@ -378,20 +459,20 @@ public class MainActivity extends AppCompatActivity
                 });
                 item.setActionView(LongClickView);
             } while (playlistsCursor.moveToNext());
+        }catch(Exception e) {
+            Log.e(TAG,"Cant set playlist as menu items ",e);
         }
     }
 
-
     public void onColonClick(final View theView)
     {
-        //TODO add on click animation
         // Start an alpha animation for clicked item
         Animation animation1 = new AlphaAnimation(0.3f, 1.0f);
         animation1.setDuration(2000);
         theView.startAnimation(animation1);
         //get Cursor from view
         final View parentRow = (View) theView.getParent();
-        ListView listView = (ListView) parentRow.getParent();
+        final ListView listView = (ListView) parentRow.getParent();
         final int position = listView.getPositionForView(parentRow);
         AllSongsCursorAdapter cursorAdapter = (AllSongsCursorAdapter)listView.getAdapter();
         final Cursor songCursor = cursorAdapter.getCursor();
@@ -404,6 +485,7 @@ public class MainActivity extends AppCompatActivity
 //        menu.add(R.string.add_to_playlist);
 //        menu.add(R.string.delete_from_playlist);
         menu.add(R.string.set_as_def_ring);
+        menu.add(R.string.choose_this_song);
 
         setPlayListsAsMenuItem(navigationView);
 
@@ -414,12 +496,14 @@ public class MainActivity extends AppCompatActivity
                 /*if(itemName.equals(getString(R.string.delete_from_playlist))) {
                     TextView songName = (TextView) parentRow.findViewById(R.id.title);
                     String songNameS = songName.getText().toString();
-                    //TODO check if its not all songs
                     appDialogs.showAreYouSureDialog(songNameS,CurrentVisiblePlaylist,songCursor,playlistNames);
 
                 }else if(itemName.equals(getString(R.string.add_to_playlist))) {
                     appDialogs.showAddToPlayList(playlistNames,songCursor);
-                }else */if(itemName.equals(getString(R.string.set_as_def_ring))){
+                }else */
+
+
+                if(itemName.equals(getString(R.string.set_as_def_ring))){
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                             !Settings.System.canWrite(getApplicationContext())){
                         Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
@@ -429,8 +513,9 @@ public class MainActivity extends AppCompatActivity
                     } else {
                         AlarmSelectorService.setMediaAsDefaultRingtone(getApplicationContext(),songCursor,isPlaylistSong);
                     }
-
-
+                }else if(itemName.equals(getString(R.string.choose_this_song)))
+                {
+                    chooseAListItem(parentRow,position);
                 }
 
                 popupMenu.dismiss();
@@ -440,6 +525,7 @@ public class MainActivity extends AppCompatActivity
 
         popupMenu.show();
     }
+
 
 //    public void onAddToPlayListClick(final View theView)
 //    {
@@ -462,9 +548,15 @@ public class MainActivity extends AppCompatActivity
         int position = listView.getPositionForView(parentRow);
         AllSongsCursorAdapter cursorAdapter = (AllSongsCursorAdapter)listView.getAdapter();
         Cursor songCursor = cursorAdapter.getCursor();
-        songCursor.moveToPosition(position);
 
-        playWithDefaultMediaPlayer(songCursor);
+        if(songCursor != null && !songCursor.isNull(position))
+        {
+            songCursor.moveToPosition(position);
+            playWithDefaultMediaPlayer(songCursor);
+        }else{
+            Toast.makeText(this,"Can't play this song - ERROR",Toast.LENGTH_SHORT).show();
+        }
+
     }
 
     public void onAddToPlayLIstFabClick(final View view)
@@ -474,14 +566,28 @@ public class MainActivity extends AppCompatActivity
 
     public void playWithDefaultMediaPlayer(Cursor MediaCursor)
     {
-        //Get newMediaPath
-        String newMediaPath = MediaCursor.getString(MediaCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
+        try{
+            if (Build.VERSION.SDK_INT >= 24) {
+                try {
+                    Method m = StrictMode.class.getMethod("disableDeathOnFileUriExposure");
+                    m.invoke(null);
+                } catch (Exception e) {
+                    Log.e(TAG,"can't disable DeathOnFileUriExposure",e);
+                }
+            }
 
-        Intent intent = new Intent();
-        intent.setAction(android.content.Intent.ACTION_VIEW);
-        File file = new File(newMediaPath);
-        intent.setDataAndType(Uri.fromFile(file), "audio/*");
-        startActivity(intent);
+            //Get newMediaPath
+            String newMediaPath = MediaCursor.getString(MediaCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
+
+            Intent intent = new Intent();
+            intent.setAction(android.content.Intent.ACTION_VIEW);
+            File file = new File(newMediaPath);
+            intent.setDataAndType(Uri.fromFile(file), "audio/*");
+            startActivity(intent);
+        }catch (Exception e) {
+            Log.e(TAG,"can't find an app to play default ringtone with",e);
+            Toast.makeText(this,"Sorry Can't play this Song",Toast.LENGTH_SHORT).show();
+        }
     }
 
     public void setAppBarIconsVisibility(boolean visible)
@@ -504,9 +610,9 @@ public class MainActivity extends AppCompatActivity
                         public void run() {
                             mList.setFastScrollEnabled(false);
                         }
-                    },1000);
-
+                    },800);
                 }
+
 
                 mCurrentState = state;
             }
@@ -515,9 +621,33 @@ public class MainActivity extends AppCompatActivity
             public void onScroll(AbsListView absListView, int i, int i1, int i2) {
                 if (mCurrentState == SCROLL_STATE_TOUCH_SCROLL) {
 
-
                     if (!mList.isFastScrollEnabled())
                         mList.setFastScrollEnabled(true);
+
+                    if(playListNameTag.getVisibility() == View.GONE)
+                    {
+                        showViewAnimatedTopToButtom(playListNameTag);
+
+                        mList.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                dismissViewAnimatedTopToButtom(playListNameTag);
+                            }
+                        },2000);
+                    }
+
+                    if(mAdView.getVisibility() == View.GONE)
+                    {
+                        mAdView.setVisibility(View.VISIBLE);
+                        slideToTop(mAdView);
+                        mList.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                slideToBottom(mAdView);
+                                mAdView.setVisibility(View.GONE);
+                            }
+                        },5000);
+                    }
                 }
             }
         });
@@ -551,14 +681,13 @@ public class MainActivity extends AppCompatActivity
     {
         // Start an alpha animation for clicked item
         Animation animation1 = new AlphaAnimation(0.3f, 1.0f);
-        animation1.setDuration(1000);
+        animation1.setDuration(600);
         view.startAnimation(animation1);
 
         // add\delete item position to selected items position array
         if(!((AllSongsCursorAdapter)listView.getAdapter()).AddSelectedPosition(position))
         {
             ((AllSongsCursorAdapter)listView.getAdapter()).removeSelectedPosition(position);
-
         }
         // update list
         ((AllSongsCursorAdapter)listView.getAdapter()).notifyDataSetChanged();
@@ -571,6 +700,58 @@ public class MainActivity extends AppCompatActivity
     public String getCurrentPlayListName()
     {
         return CurrentVisiblePlaylist;
+    }
+
+
+    public void showViewAnimatedTopToButtom(View view)
+    {
+        if(view.getVisibility() != View.VISIBLE)
+        {
+            // Prepare the View for the animation
+            view.setVisibility(View.VISIBLE);
+            view.setAlpha(0.0f);
+
+            // Start the animation
+            view.animate()
+                    .translationY(view.getHeight())
+                    .alpha(1.0f);
+        }
+    }
+
+    public void dismissViewAnimatedTopToButtom(final View view){
+
+        if(view.getVisibility() == View.VISIBLE)
+        {
+            view.animate()
+                    .translationY(0)
+                    .alpha(0.0f)
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            super.onAnimationEnd(animation);
+                            if(view.getTranslationY() == 0)
+                            {
+                                view.setVisibility(View.GONE);
+                            }
+                        }
+                    });
+        }
+    }
+
+    public void slideToBottom(View view){
+        TranslateAnimation animate = new TranslateAnimation(0,0,0,view.getHeight());
+        animate.setDuration(500);
+        animate.setFillAfter(true);
+        view.startAnimation(animate);
+        view.setVisibility(View.GONE);
+    }
+
+    public void slideToTop(View view){
+        TranslateAnimation animate = new TranslateAnimation(0,0,view.getHeight(),0);
+        animate.setDuration(500);
+        animate.setFillAfter(true);
+        view.startAnimation(animate);
+        view.setVisibility(View.VISIBLE);
     }
 
 }

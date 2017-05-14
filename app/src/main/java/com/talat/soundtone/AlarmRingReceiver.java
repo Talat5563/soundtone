@@ -25,8 +25,6 @@ public class AlarmRingReceiver extends BroadcastReceiver {
                 action.equals("com.android.alarmclock.ALARM_ALERT")||
                 action.equals("com.android.deskclock.DeskClock")||
                 action.equals("com.motorola.blur.alarmclock.AlarmAlert")||
-                action.equals("com.motorola.blur.alarmclock.AlarmAlert")||
-                action.equals("com.motorola.blur.alarmclock.AlarmAlert")||
                 action.equals("com.samsung.sec.android.clockpackage.alarm.ALARM_ALERT")||
                 action.equals("com.lge.alarm.alarmclocknew"))
         {
